@@ -168,7 +168,6 @@ def inputMatrix(dict_list, words_dict, trends_ratio_15,trends_ratio_30,trends_ra
     return X_.astype(float)
 
 def train_predict(X_train, X_test, y_train, y_test):
-
     model_name_list = ['LogisticRegression', 'DecisionTree', 'SVM', 'KNeighbors', 'RandomForest']
     model = LogisticRegression(C=1e5, random_state=0, solver='liblinear', multi_class='auto', max_iter=5000)
     model1 = DecisionTreeClassifier(criterion='entropy', max_depth=21, random_state=0)
@@ -196,49 +195,20 @@ def train_predict(X_train, X_test, y_train, y_test):
         print("The accuracy of "+name+" model is: ",accuracy)
         print("The negative accuracy of "+name+" model is: ",neg_acc)
 
-def batch_train_predict(batch_num,X_train, X_test, y_train, y_test):
-    model = LogisticRegression(random_state=0, solver='lbfgs', multi_class='multinomial')
-    model2 = SVC(kernel='rbf', tol=1e-3, random_state=0, gamma=0.2, C=10.0, verbose=True)  # 8.05 for SVM model
-    model3 = KNeighborsClassifier(n_neighbors=21, p=3, metric='minkowski')  # 7.05 for  model
-    model5 = DecisionTreeClassifier(criterion='entropy', max_depth=21, random_state=0)
-    model4 = RandomForestClassifier(criterion='entropy', n_estimators=21, random_state=1,n_jobs=2)  # 5.2 for randomforest
-    model1 = LogisticRegression(random_state=0, solver='lbfgs', multi_class='multinomial')
-    train_batch_size = int(len(y_train)/(batch_num-1))
-    train_rest_size = len(y_train)% train_batch_size
-    test_batch_size = int(len(y_test)/(batch_num-1))
-    test_rest_size = len(y_test)% test_batch_size
-    print(train_batch_size,train_rest_size,test_batch_size,test_rest_size)
-    for i in range(1,batch_num):
-        print(i)
-        X_train_input = X_train[(i-1)*train_batch_size:i*train_batch_size]
-        y_train_input = y_train[(i-1)*train_batch_size:i*train_batch_size]
-        X_test_input = X_test[(i - 1) * test_rest_size:i * test_rest_size]
-        y_test_input = y_test[(i - 1) * test_rest_size:i * test_rest_size]
-        model.fit(X_train_input, y_train_input)
-        prediction_y = model.predict(X_test_input)
-        accuracy = accuracy_score(y_test_input, prediction_y)
-        print(prediction_y)
-        print(y_test_input)
-        print("The accuracy of LogisticRegression model is: ", accuracy)
-
-    X_train_input = X_train[len(X_train)-train_rest_size:]
-    y_train_input = y_train[len(y_train)-train_rest_size:]
-    X_test_input = X_test[len(X_test)-test_rest_size:]
-    y_test_input = y_test[len(y_test)-test_rest_size:]
-    model.fit(X_train_input, y_train_input)
-    prediction_y = model.predict(X_test_input)
-    accuracy = accuracy_score(y_test_input, prediction_y)
-    print(prediction_y)
-    print(y_test_input)
-    print("The accuracy of LogisticRegression model is: ", accuracy)
-
 trends = csvdata1()
 trends_ratio_15,trends_ratio_30,trends_ratio_60,coef = calcTrends(trends)
 raw_dict_list,raw_words_dict,target,length = csvdata()
-y = target
+y = np.array(target).ravel()
 X = inputMatrix(raw_dict_list,raw_words_dict,trends_ratio_15,trends_ratio_30,trends_ratio_60,coef,length)
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4, random_state=0)
-batch_num = 10
-#batch_train_predict(batch_num,X_train, X_test, y_train, y_test)
-train_predict(X_train, X_test, y_train, y_test)
+from sklearn.model_selection import StratifiedKFold
+skf = StratifiedKFold(n_splits=10, random_state=None)
+# X is the feature set and y is the target
+for train_index, val_index in skf.split(X,y):
+    #print("Train:", train_index, "Validation:", val_index)
+    X_train, X_test = X[train_index], X[val_index]
+    y_train, y_test = y[train_index], y[val_index]
+    train_predict(X_train, X_test, y_train, y_test)
+#X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4, random_state=5)
+
+#train_predict(X_train, X_test, y_train, y_test)
 #print(toOnehotkey(dict_list))
