@@ -316,25 +316,32 @@ def learning_rate(X, y, n_samples=5, cv = 5):
     random_state = 12883823
     rkf = RepeatedKFold(n_splits=cv, n_repeats=10, random_state=random_state)
     X_plot = []
-    pos_train_list = []
-    pos_test_list = []
-    neg_train_list = []
-    neg_test_list = []
-    for pos in (np.linspace(0.05, 0.8, num=n_samples)):
+
+    pos_train_mean_list = []
+    pos_test_mean_list = []
+    neg_train_mean_list = []
+    neg_test_mean_list = []
+    pos_train_std_list = []
+    pos_test_std_list = []
+    neg_train_std_list = []
+    neg_test_std_list = []
+
+
+    for pos in (np.linspace(0.05, 1.0, num=n_samples)):
         n_sample = int(len(y)*pos)
         print("\n\n\n\n-------------- %d samples-----------------" % n_sample)
         X_plot.append(n_sample)
         X_sample = X[:n_sample]
         y_sample = y[:n_sample]
 
-
+        pos_train_score = {}
+        pos_test_score = {}
+        neg_test_score = {}
+        neg_train_score = {}
+        isExist = 0
         model5 = nn_model(X_sample)
 
         model_name_list = ['LogisticRegression', 'DecisionTree', 'SVM', 'KNeighbors', 'RandomForest','1-layer Neural Network']
-        neg_test_score = np.zeros(len(model_name_list))
-        neg_train_score = np.zeros(len(model_name_list))
-        pos_train_score = np.zeros(len(model_name_list))
-        pos_test_score = np.zeros(len(model_name_list))
         for train_index, val_index in rkf.split(X_sample, y_sample):
 
             # print("Train:", train_index, "Validation:", val_index)
@@ -354,8 +361,16 @@ def learning_rate(X, y, n_samples=5, cv = 5):
             neg_test_acc = []
             neg_train_acc = []
 
+
             print('Train: %s | test: %s' % (train_index, val_index))
             for mod, name in zip(model_list, model_name_list):
+                if(isExist < len(model_name_list)):
+                    neg_test_score[name] = []
+                    neg_train_score[name] = []
+                    pos_train_score[name] = []
+                    pos_test_score[name] = []
+                    isExist = isExist + 1
+
                 if(name == '1-layer Neural Network'):
                     features = X_train
                     targets = np.array(keras.utils.to_categorical(y_train))
@@ -393,50 +408,83 @@ def learning_rate(X, y, n_samples=5, cv = 5):
                 neg_test_acc.append(accuracy_score(neg_test, neg_predict_test))
                 neg_train_acc.append(accuracy_score(neg_train, neg_predict_train))
 
-            neg_test_score = [re + re1 for re,re1 in zip(neg_test_score,neg_test_acc)]
-            neg_train_score = [re + re1 for re, re1 in zip(neg_train_score, neg_train_acc)]
-            pos_test_score = [re + re1 for re,re1 in zip(pos_test_score,pos_test_accuracy)]
-            pos_train_score = [re + re1 for re, re1 in zip(pos_train_score, pos_train_accuracy)]
+            for re,name in zip(neg_test_acc,model_name_list):neg_test_score[name].append(re)
+            for re,name in zip(neg_train_acc,model_name_list):neg_train_score[name].append(re)
+            for re,name in zip(pos_test_accuracy,model_name_list):pos_test_score[name].append(re)
+            for re,name in zip(pos_train_accuracy,model_name_list):pos_train_score[name].append(re)
 
-        print(neg_test_score, neg_train_score, pos_test_score, pos_train_score)
-        neg_test_score_avg = [re/cv for re in neg_test_score]
-        neg_train_score_avg = [re / cv for re in neg_train_score]
-        pos_test_score_avg = [re / cv for re in pos_test_score]
-        pos_train_score_avg = [re / cv for re in pos_train_score]
-        pos_train_dict = {}
-        pos_test_dict = {}
-        neg_train_dict = {}
-        neg_test_dict = {}
-        for name,val1,val2,val3,val4 in zip(model_name_list,neg_train_score_avg,neg_test_score_avg, pos_train_score_avg, pos_test_score_avg):
-            neg_train_dict[name] = val1
-            neg_test_dict[name] = val2
-            pos_train_dict[name] = val3
-            pos_test_dict[name] = val4
+        #print(neg_test_score, neg_train_score, pos_test_score, pos_train_score)
+        neg_test_score_mean = [np.nanmean(ele) for ele in neg_test_score.values()]
+        neg_train_score_mean = [np.nanmean(ele) for ele in neg_train_score.values()]
+        pos_test_score_mean = [np.nanmean(ele) for ele in pos_test_score.values()]
+        pos_train_score_mean = [np.nanmean(ele) for ele in pos_train_score.values()]
 
-        pos_train_list.append(pos_train_dict)
-        pos_test_list.append(pos_test_dict)
-        neg_train_list.append(neg_train_dict)
-        neg_test_list.append(neg_test_dict)
+        neg_test_score_std = [np.nanstd(ele) for ele in neg_test_score.values()]
+        neg_train_score_std = [np.nanstd(ele) for ele in neg_train_score.values()]
+        pos_test_score_std = [np.nanstd(ele) for ele in pos_test_score.values()]
+        pos_train_score_std = [np.nanstd(ele) for ele in pos_train_score.values()]
+
+        pos_train_mean = {}
+        pos_test_mean = {}
+        neg_train_mean = {}
+        neg_test_mean = {}
+
+        pos_train_std = {}
+        pos_test_std = {}
+        neg_train_std = {}
+        neg_test_std = {}
+
+        for name,val1,val2,val3,val4,ele1,ele2,ele3,ele4 in zip(model_name_list,neg_train_score_mean,neg_test_score_mean, pos_train_score_mean, pos_test_score_mean
+                , neg_train_score_std,neg_test_score_std, pos_train_score_std, pos_test_score_std):
+            neg_train_mean[name] = val1
+            neg_test_mean[name] = val2
+            pos_train_mean[name] = val3
+            pos_test_mean[name] = val4
+            neg_train_std[name] = ele1
+            neg_test_std[name] = ele2
+            pos_train_std[name] = ele3
+            pos_test_std[name] = ele4
+
+
+        pos_train_std_list.append(pos_train_std)
+        pos_test_std_list.append(pos_test_std)
+        neg_train_std_list.append(neg_train_std)
+        neg_test_std_list.append(neg_test_std)
+        pos_train_mean_list.append(pos_train_mean)
+        pos_test_mean_list.append(pos_test_mean)
+        neg_train_mean_list.append(neg_train_mean)
+        neg_test_mean_list.append(neg_test_mean)
 
     plt_dict = {}
     for name in model_name_list:
-        y_1 = []
-        y_2 = []
-        y_3 = []
-        y_4 = []
-        for ele,ele1,ele2,ele3 in zip(pos_train_list,pos_test_list,neg_train_list,neg_test_list):
-            y_1.append(ele[name])
-            y_2.append(ele1[name])
-            y_3.append(ele2[name])
-            y_4.append(ele3[name])
+        y_1_mean = []
+        y_2_mean = []
+        y_3_mean = []
+        y_4_mean = []
+        y_1_std = []
+        y_2_std = []
+        y_3_std = []
+        y_4_std = []
+        for ele,ele1,ele2,ele3,val1,val2,val3,val4 in zip(pos_train_mean_list,pos_test_mean_list,neg_train_mean_list,neg_test_mean_list,pos_train_std_list,pos_test_std_list,neg_train_std_list,neg_test_std_list):
+            y_1_mean.append(ele[name])
+            y_2_mean.append(ele1[name])
+            y_3_mean.append(ele2[name])
+            y_4_mean.append(ele3[name])
+            y_1_std.append(val1[name])
+            y_2_std.append(val2[name])
+            y_3_std.append(val3[name])
+            y_4_std.append(val4[name])
 
-        plt_dict[name] = [y_2,y_4]
+        plt_dict[name] = [y_2_mean,y_4_mean,y_2_std,y_4_std]
     print(plt_dict)
     fig, ax = plt.subplots()
     colors = ['b','g','r','c','m','y']
     for name, color in zip(model_name_list,colors):
         #line1, = ax.plot(X_plot, plt_dict[name], 'c*-', label='balanced train score')
         line2, = ax.plot(X_plot, plt_dict[name][0], 'm.-.', label='balanced cross-validation score:'+name, c = color)
+        ax.fill_between(X_plot, np.array(plt_dict[name][0]) - np.array(plt_dict[name][2]),
+                         np.array(plt_dict[name][0]) + np.array(plt_dict[name][2]), alpha=0.1,
+                         color=color)
         #line3, = ax.plot(X_plot, plt_dict[name], 'b*-', label='negative train score')
         #line4, = ax.plot(X_plot, plt_dict[name][1], 'r.-.', label='negative cross-validation score:'+name)
     ax.set_ylim(0.0, 1.2)
@@ -454,6 +502,9 @@ def learning_rate(X, y, n_samples=5, cv = 5):
         #line2, = ax.plot(X_plot, plt_dict[name], 'm.-.', label='balanced cross-validation score')
         #line3, = ax.plot(X_plot, plt_dict[name], 'b*-', label='negative train score')
         line4, = ax.plot(X_plot, plt_dict[name][1], 'r.-.', label='negative cross-validation score:'+name, c = color)
+        ax.fill_between(X_plot, np.array(plt_dict[name][1]) - np.array(plt_dict[name][3]),
+                        np.array(plt_dict[name][1]) + np.array(plt_dict[name][3]), alpha=0.1,
+                        color=color)
     ax.set_ylim(0.0, 1.2)
     ax.set_xlabel('cross-validation examples')
     ax.set_ylabel('negative accuracy')
@@ -499,6 +550,29 @@ def learning_rate(X, y):
         fig.savefig('output/'+name+'.png')
 """
 
+
+def grid_search(X_train_, X_test_, y_train_, y_test_):
+    from sklearn.model_selection import GridSearchCV
+    parameters_svm = {'kernel': ('linear',  'poly', 'rbf'), 'C': [1, 10, 100, 1e5]}
+    parameters_logistic = {'solver': ('liblinear', 'saga'), 'C': [1, 10, 100, 1e5], 'max_iter': [3000, 5000, 8000]}
+    parameters_decisiontree = {'criterion': ('entropy', 'gini'), 'max_depth': [10, 21, 42]}
+    parameters_kneighbors = {'n_neighbors': (10, 15, 21, 27), 'p': (1, 2, 3)}
+    parameters_randomforest = {'n_estimators': (25,50,100,150), 'criterion': ('entropy', 'gini'), 'max_depth': [10, 21, 42]}
+    parameters_list = [parameters_logistic, parameters_decisiontree, parameters_svm, parameters_kneighbors, parameters_randomforest]
+
+    model = LogisticRegression(random_state=0, multi_class='auto')
+    model1 = DecisionTreeClassifier(random_state=0)
+    model2 = SVC(tol=1e-3, random_state=0, gamma="scale",verbose=True)
+    # model2 = SVC(kernel='linear')
+    model3 = KNeighborsClassifier(metric='minkowski', algorithm= 'auto')
+    model4 = RandomForestClassifier(random_state=1, n_jobs=2)
+    model_list = [model, model1, model2, model3, model4]
+
+    for mod,parameter in zip(model_list, parameters_list):
+        clf = GridSearchCV(mod, parameter, cv=5)
+        clf.fit(X_train_, y_train_)
+        print(sorted(clf.cv_results_.keys()))
+
 trends = csvdata1()
 trends_ratio_15,trends_ratio_30,trends_ratio_60,coef = calcTrends(trends)
 raw_dict_list,raw_words_dict,target,length = csvdata()
@@ -512,8 +586,8 @@ max_acc = 0
 best_mod_list = []
 tag = 0
 X_train_, X_test_, y_train_, y_test_ = train_test_split(X,y, test_size=0.3, random_state=5)
-
-learning_rate(X_train_, y_train_)
+grid_search(X_train_, X_test_, y_train_, y_test_)
+#learning_rate(X_train_, y_train_)
 
 for train_index, val_index in skf.split(X_train_,y_train_):
     #print("Train:", train_index, "Validation:", val_index)
