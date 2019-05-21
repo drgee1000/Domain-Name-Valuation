@@ -553,8 +553,13 @@ def learning_rate(X, y):
 
 def grid_search(X_train_, X_test_, y_train_, y_test_):
     from sklearn.model_selection import GridSearchCV
+    from sklearn.preprocessing import StandardScaler
+
+    scaler = StandardScaler()
+    X_transform = scaler.fit_transform(X_train_)
+
     parameters_svm = {'kernel': ('linear',  'poly', 'rbf'), 'C': [1, 10, 100, 1e5]}
-    parameters_logistic = {'solver': ('liblinear', 'saga'), 'C': [1, 10, 100, 1e5], 'max_iter': [3000, 5000, 8000]}
+    parameters_logistic = {'solver': ('liblinear', 'saga'), 'C': [1, 10, 100, 1e5], 'max_iter': [1000, 2000, 3000]}
     parameters_decisiontree = {'criterion': ('entropy', 'gini'), 'max_depth': [10, 21, 42]}
     parameters_kneighbors = {'n_neighbors': (10, 15, 21, 27), 'p': (1, 2, 3)}
     parameters_randomforest = {'n_estimators': (25,50,100,150), 'criterion': ('entropy', 'gini'), 'max_depth': [10, 21, 42]}
@@ -570,8 +575,8 @@ def grid_search(X_train_, X_test_, y_train_, y_test_):
 
     for mod,parameter in zip(model_list, parameters_list):
         clf = GridSearchCV(mod, parameter, cv=5)
-        clf.fit(X_train_, y_train_)
-        print(sorted(clf.cv_results_.keys()))
+        clf.fit(X_transform, y_train_)
+        print(clf.cv_results_)
 
 trends = csvdata1()
 trends_ratio_15,trends_ratio_30,trends_ratio_60,coef = calcTrends(trends)
