@@ -3,3 +3,4 @@ keras
 sklearn
 numpy==1.16.2
 tensorflow
+matplotlib
