@@ -1,6 +1,6 @@
 # cat requirements.txt
 keras
 sklearn
-numpy==1.16.2
+numpy==1.22.0
 tensorflow
 matplotlib
